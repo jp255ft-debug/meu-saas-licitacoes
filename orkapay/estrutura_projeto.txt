@@ -1,0 +1,179 @@
+﻿# Estrutura do Projeto OrkaPay
+# Gerado em: 01/07/2026 00:46:58
+# Profundidade maxima: 4 niveis
+# Ignora: node_modules, .git, __pycache__, dist, build, venv, .next, .vscode, bin, obj, .terraform, vendor
+# ==========================================
+orkapay/
+|-- .clinerules
+|-- .memory
+|-- api-gateway
+|   |-- src
+    |   |-- common
+        |   |-- config
+        |   |-- decorators
+        |   |-- filters
+        |   |-- guards
+        |   |-- interceptors
+        |   |-- logger
+        |   +-- middlewares
+    |   |-- infrastructure
+        |   |-- cache
+        |   |-- database
+        |   |-- grpc
+        |   |-- http
+        |   +-- messaging
+    |   |-- migrations
+    |   +-- modules
+        |   |-- boleto
+        |   |-- cashin
+        |   |-- cashout
+        |   |-- health
+        |   |-- merchant
+        |   |-- payment
+        |   |-- reconciliation
+        |   |-- rewards
+        |   +-- subscription
+|   +-- test
+    |   |-- e2e
+    |   +-- unit
+|-- deployments
+|   |-- github
+    |   +-- workflows
+|   +-- helm
+    |   |-- api-gateway
+    |   |-- boleto-engine
+    |   |-- cashin-engine
+    |   |-- cashout-engine
+    |   |-- notification
+    |   |-- payment-core
+    |   |-- reconciliation
+    |   |-- rewards-engine
+    |   +-- smart-retry
+|-- docs
+|   |-- adr
+|   |-- api
+|   |-- business
+|   |-- pricing
+|   +-- runbooks
+|-- infrastructure
+|   |-- kubernetes
+    |   |-- base
+    |   +-- overlays
+        |   |-- dev
+        |   |-- production
+        |   +-- staging
+|   |-- monitoring
+    |   |-- alerts
+    |   |-- dashboards
+    |   +-- logging
+|   +-- terraform
+    |   |-- environments
+        |   |-- dev
+        |   |-- production
+        |   +-- staging
+    |   +-- modules
+        |   |-- database
+        |   |-- kubernetes
+        |   +-- networking
+|-- proto
+|   |-- boleto
+|   |-- cashin
+|   |-- cashout
+|   |-- payment
+|   +-- subscription
+|-- scripts
+|   |-- deployment
+|   |-- migrations
+|   +-- seed
+|-- services
+|   |-- boleto-engine
+    |   |-- cmd
+        |   |-- api
+        |   +-- consumer
+    |   |-- internal
+        |   |-- adapter
+        |   |-- core
+        |   +-- service
+    |   +-- pkg
+|   |-- cashin-engine
+    |   |-- cmd
+        |   |-- api
+        |   +-- consumer
+    |   |-- internal
+        |   |-- adapter
+        |   |-- core
+        |   +-- service
+    |   +-- pkg
+|   |-- cashout-engine
+    |   |-- cmd
+        |   |-- api
+        |   +-- consumer
+    |   |-- internal
+        |   |-- adapter
+        |   |-- core
+        |   +-- service
+    |   +-- pkg
+|   |-- notification
+    |   |-- cmd
+        |   +-- consumer
+    |   |-- internal
+        |   |-- adapter
+        |   |-- core
+        |   +-- service
+    |   +-- pkg
+|   |-- payment-core
+    |   |-- cmd
+        |   |-- api
+        |   |-- consumer
+        |   +-- scheduler
+    |   |-- internal
+        |   |-- adapter
+        |   |-- core
+        |   |-- infrastructure
+        |   +-- service
+    |   +-- pkg
+        |   |-- config
+        |   |-- crypto
+        |   |-- errors
+        |   +-- utils
+|   |-- reconciliation
+    |   |-- cmd
+        |   +-- consumer
+    |   |-- internal
+        |   |-- adapter
+        |   |-- core
+        |   +-- service
+    |   +-- pkg
+|   |-- rewards-engine
+    |   |-- cmd
+        |   |-- api
+        |   |-- consumer
+        |   +-- scheduler
+    |   |-- internal
+        |   |-- adapter
+        |   |-- core
+        |   +-- service
+    |   +-- pkg
+|   +-- smart-retry
+    |   |-- cmd
+        |   |-- consumer
+        |   +-- scheduler
+    |   |-- internal
+        |   |-- adapter
+        |   |-- core
+        |   +-- service
+    |   +-- pkg
++-- shared
+|   |-- baas
+    |   |-- asaas
+    |   |-- boleto
+    |   |-- celcoin
+    |   |-- fitbank
+    |   +-- starkbank
+|   |-- contracts
+    |   |-- boleto
+    |   |-- cashin
+    |   |-- cashout
+    |   |-- payment
+    |   +-- rewards
+|   +-- types
