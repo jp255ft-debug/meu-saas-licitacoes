@@ -1,10 +1,12 @@
 ﻿# Estrutura do Projeto OrkaPay
-# Gerado em: 01/07/2026 00:46:58
-# Profundidade maxima: 4 niveis
+# Gerado em: 06/07/2026 12:36:03
+# Profundidade maxima: 5 niveis
 # Ignora: node_modules, .git, __pycache__, dist, build, venv, .next, .vscode, bin, obj, .terraform, vendor
 # ==========================================
 orkapay/
 |-- .clinerules
+|-- .github
+|   +-- workflows
 |-- .memory
 |-- api-gateway
 |   |-- src
@@ -21,17 +23,50 @@ orkapay/
         |   |-- database
         |   |-- grpc
         |   |-- http
+            |   |-- asaas
+            |   |-- boleto
+            |   |-- celcoin
+            |   |-- fitbank
+            |   +-- starkbank
         |   +-- messaging
+            |   |-- kafka
+            |   +-- rabbitmq
     |   |-- migrations
     |   +-- modules
         |   |-- boleto
+            |   |-- controllers
+            |   |-- dto
+            |   |-- entities
+            |   +-- services
         |   |-- cashin
+            |   |-- controllers
+            |   |-- dto
+            |   |-- entities
+            |   +-- services
         |   |-- cashout
+            |   |-- controllers
+            |   |-- dto
+            |   |-- entities
+            |   +-- services
         |   |-- health
         |   |-- merchant
         |   |-- payment
+            |   |-- controllers
+            |   |-- dto
+            |   |-- entities
+            |   |-- repositories
+            |   +-- services
         |   |-- reconciliation
+            |   |-- controllers
+            |   |-- dto
+            |   |-- entities
+            |   |-- repositories
+            |   +-- services
         |   |-- rewards
+            |   |-- controllers
+            |   |-- dto
+            |   |-- entities
+            |   +-- services
         |   +-- subscription
 |   +-- test
     |   |-- e2e
@@ -75,6 +110,13 @@ orkapay/
         |   |-- database
         |   |-- kubernetes
         |   +-- networking
+|-- monitoring
+|   |-- alertmanager
+|   |-- grafana
+    |   +-- provisioning
+        |   +-- datasources
+|   +-- prometheus
+    |   +-- rules
 |-- proto
 |   |-- boleto
 |   |-- cashin
@@ -90,34 +132,57 @@ orkapay/
     |   |-- cmd
         |   |-- api
         |   +-- consumer
+            |   +-- kafka
     |   |-- internal
         |   |-- adapter
+            |   |-- inbound
+            |   +-- outbound
         |   |-- core
+            |   |-- domain
+            |   +-- port
         |   +-- service
     |   +-- pkg
 |   |-- cashin-engine
     |   |-- cmd
         |   |-- api
         |   +-- consumer
+            |   +-- kafka
     |   |-- internal
         |   |-- adapter
+            |   |-- config
+            |   |-- inbound
+            |   +-- outbound
         |   |-- core
+            |   |-- domain
+            |   +-- port
         |   +-- service
+            |   |-- invoice
+            |   +-- webhook
     |   +-- pkg
 |   |-- cashout-engine
     |   |-- cmd
         |   |-- api
         |   +-- consumer
+            |   +-- kafka
     |   |-- internal
         |   |-- adapter
+            |   |-- config
+            |   |-- inbound
+            |   +-- outbound
         |   |-- core
+            |   |-- domain
+            |   +-- port
         |   +-- service
+            |   +-- transfer
     |   +-- pkg
 |   |-- notification
     |   |-- cmd
         |   +-- consumer
+            |   +-- kafka
     |   |-- internal
         |   |-- adapter
+            |   |-- inbound
+            |   +-- outbound
         |   |-- core
         |   +-- service
     |   +-- pkg
@@ -125,12 +190,29 @@ orkapay/
     |   |-- cmd
         |   |-- api
         |   |-- consumer
-        |   +-- scheduler
+            |   |-- kafka
+            |   +-- rabbitmq
+        |   |-- scheduler
+        |   +-- server
     |   |-- internal
         |   |-- adapter
+            |   |-- inbound
+            |   +-- outbound
         |   |-- core
+            |   |-- application
+            |   |-- domain
+            |   +-- port
         |   |-- infrastructure
+            |   |-- cache
+            |   |-- config
+            |   |-- database
+            |   |-- logger
+            |   +-- metrics
         |   +-- service
+            |   |-- boleto
+            |   |-- cashback
+            |   |-- payment
+            |   +-- subscription
     |   +-- pkg
         |   |-- config
         |   |-- crypto
@@ -139,31 +221,46 @@ orkapay/
 |   |-- reconciliation
     |   |-- cmd
         |   +-- consumer
+            |   +-- kafka
     |   |-- internal
         |   |-- adapter
+            |   |-- inbound
+            |   +-- outbound
         |   |-- core
+            |   +-- domain
         |   +-- service
     |   +-- pkg
 |   |-- rewards-engine
     |   |-- cmd
         |   |-- api
         |   |-- consumer
+            |   +-- kafka
         |   +-- scheduler
     |   |-- internal
         |   |-- adapter
+            |   |-- inbound
+            |   +-- outbound
         |   |-- core
+            |   |-- domain
+            |   +-- port
         |   +-- service
     |   +-- pkg
 |   +-- smart-retry
     |   |-- cmd
         |   |-- consumer
+            |   +-- rabbitmq
         |   +-- scheduler
     |   |-- internal
         |   |-- adapter
+            |   |-- inbound
+            |   +-- outbound
         |   |-- core
+            |   |-- domain
+            |   +-- port
         |   +-- service
+            |   +-- retry
     |   +-- pkg
-+-- shared
+|-- shared
 |   |-- baas
     |   |-- asaas
     |   |-- boleto
@@ -177,3 +274,13 @@ orkapay/
     |   |-- payment
     |   +-- rewards
 |   +-- types
++-- tests
+|   |-- chaos
+|   |-- load
+|   |-- security
+    |   +-- zap
+|   |-- toxiproxy
+|   +-- wiremock
+    |   +-- stubs
+        |   |-- asaas
+        |   +-- starkbank
