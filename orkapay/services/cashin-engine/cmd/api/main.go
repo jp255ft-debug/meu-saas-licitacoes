@@ -32,12 +32,14 @@ func main() {
 	// 3. Conectar ao banco de dados
 	var svc *invoice.ServiceImpl
 	var webhookSvc *webhook.WebhookService
+	var pool *pgxpool.Pool
 
 	if cfg.DatabaseURL != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		pool, err := postgres.NewPool(ctx, cfg.DatabaseURL, postgres.DefaultPoolConfig())
+		var err error
+		pool, err = postgres.NewPool(ctx, cfg.DatabaseURL, postgres.DefaultPoolConfig())
 		if err != nil {
 			logger.Error("falha ao conectar ao banco de dados", "error", err)
 			os.Exit(1)
@@ -62,10 +64,30 @@ func main() {
 		logger.Warn("DATABASE_URL não configurada — modo sem persistência")
 	}
 
-	// 6. Configurar rate limiter e router HTTP
+	// 6. Configurar autenticação, rate limiter e router HTTP
 	apiKeys := parseAPIKeys(cfg.APIKeys)
+	mapProvider := middleware.NewMapAuthProvider(apiKeys)
+	
+	var authProviders []middleware.AuthProvider
+	authProviders = append(authProviders, mapProvider)
+	
+	// Se tiver pool de banco, adiciona CachedDBProvider como fallback
+	if pool != nil {
+		dbProvider := middleware.NewCachedDBProvider(func(apiKey string) (string, bool) {
+			var clientID string
+			err := pool.QueryRow(context.Background(),
+				`SELECT client_id FROM api_keys WHERE key_hash = crypt($1, key_hash)`, apiKey,
+			).Scan(&clientID)
+			if err != nil {
+				return "", false
+			}
+			return clientID, true
+		})
+		authProviders = append(authProviders, dbProvider)
+	}
+
 	rateLimiter := middleware.NewRateLimiter(100, 1*time.Minute)
-	httpHandler := router.New(svc, webhookSvc, apiKeys, rateLimiter)
+	httpHandler := router.New(svc, webhookSvc, authProviders, rateLimiter)
 
 	// 7. Servidor HTTP
 	server := &http.Server{

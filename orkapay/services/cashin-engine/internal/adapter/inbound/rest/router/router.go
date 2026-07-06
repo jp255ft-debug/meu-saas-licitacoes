@@ -14,7 +14,7 @@ import (
 func New(
 	invoiceSvc *invoice.ServiceImpl,
 	webhookSvc *webhook.WebhookService,
-	apiKeys map[string]string,
+	authProviders []middleware.AuthProvider,
 	rateLimiter *middleware.RateLimiter,
 ) http.Handler {
 	mux := http.NewServeMux()
@@ -51,7 +51,7 @@ func New(
 	h = middleware.RequestIDMiddleware(h)
 	h = middleware.LoggingMiddleware(h)
 	h = rateLimiter.Middleware(h)
-	h = middleware.APIKeyAuth(apiKeys)(h)
+	h = middleware.APIKeyAuth(authProviders...)(h)
 
 	return h
 }
