@@ -15,6 +15,7 @@ import (
 	"github.com/jp255ft-debug/cashin-engine/internal/adapter/inbound/rest/router"
 	"github.com/jp255ft-debug/cashin-engine/internal/adapter/outbound/postgres"
 	"github.com/jp255ft-debug/cashin-engine/internal/adapter/outbound/provider"
+	"github.com/jp255ft-debug/cashin-engine/internal/core/port/outbound"
 	"github.com/jp255ft-debug/cashin-engine/internal/service/invoice"
 	"github.com/jp255ft-debug/cashin-engine/internal/service/webhook"
 )
@@ -55,7 +56,20 @@ func main() {
 		// 5. Montar dependências
 		repo := postgres.NewInvoiceRepository(pool)
 		webhookRepo := postgres.NewWebhookRepository(pool)
-		prov := provider.NewAsaasMock()
+
+		// Usar gateway real se configurado, senão usar mock
+		asaasBaseURL := os.Getenv("ASAAS_BASE_URL")
+		asaasAPIKey := os.Getenv("ASAAS_API_KEY")
+		asaasWalletID := os.Getenv("ASAAS_WALLET_ID")
+
+		var prov outbound.CashInProviderGateway
+		if asaasAPIKey != "" && asaasBaseURL != "" {
+			prov = provider.NewAsaasGateway(asaasBaseURL, asaasAPIKey, asaasWalletID)
+			logger.Info("usando gateway Asaas real com Split de Pagamento")
+		} else {
+			prov = provider.NewAsaasMock()
+			logger.Warn("ASAAS_API_KEY não configurada — usando mock Asaas")
+		}
 
 		webhookSvc = webhook.NewWebhookService(webhookRepo)
 		svc = invoice.NewService(repo, prov, webhookSvc)
