@@ -12,6 +12,7 @@ import (
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/adapter/inbound/rest/handler"
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/adapter/outbound/bsp"
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/config"
+	"github.com/jp255ft-debug/whatsapp-gateway/internal/core/service/notification"
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/core/service/whatsapp"
 )
 
@@ -47,6 +48,11 @@ func main() {
 	// Webhook route (receives messages from WhatsApp BSP)
 	webhookHandler := handler.NewWebhookHandler(whatsappService)
 	mux.HandleFunc("POST /webhook/whatsapp", webhookHandler.HandleWebhook)
+
+	// Notification route (receives payment confirmation from reconciliation)
+	notificationService := notification.NewService(bspSender)
+	notificationHandler := handler.NewNotificationHandler(notificationService)
+	mux.HandleFunc("POST /api/v1/notifications/payment", notificationHandler.SendPaymentConfirmation)
 
 	// 5. Start server
 	port := os.Getenv("PORT")
