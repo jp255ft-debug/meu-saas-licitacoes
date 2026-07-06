@@ -1,5 +1,5 @@
 ﻿# Estrutura do Projeto OrkaPay
-# Gerado em: 06/07/2026 12:36:03
+# Gerado em: 06/07/2026 13:06:43
 # Profundidade maxima: 5 niveis
 # Ignora: node_modules, .git, __pycache__, dist, build, venv, .next, .vscode, bin, obj, .terraform, vendor
 # ==========================================
@@ -175,6 +175,15 @@ orkapay/
         |   +-- service
             |   +-- transfer
     |   +-- pkg
+|   |-- ledger-engine
+    |   +-- internal
+        |   |-- adapter
+            |   +-- outbound
+        |   |-- core
+            |   |-- domain
+            |   +-- port
+        |   +-- service
+            |   +-- ledger
 |   |-- notification
     |   |-- cmd
         |   +-- consumer
@@ -227,8 +236,10 @@ orkapay/
             |   |-- inbound
             |   +-- outbound
         |   |-- core
-            |   +-- domain
+            |   |-- domain
+            |   +-- port
         |   +-- service
+            |   +-- reconciliation
     |   +-- pkg
 |   |-- rewards-engine
     |   |-- cmd
