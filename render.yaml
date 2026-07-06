@@ -5,7 +5,8 @@ services:
     buildCommand: cd orkapay/services/cashin-engine && go build -o cashin ./cmd/api
     startCommand: cd orkapay/services/cashin-engine && ./cashin
     plan: free
-    envGroup: orkapay-production   # <-- REFERÊNCIA AO ENVIRONMENT GROUP
+    envGroups:
+      - orkapay-production
     healthCheckPath: /health
     autoDeploy: true
 
@@ -15,6 +16,7 @@ services:
     buildCommand: cd orkapay/services/cashout-engine && go build -o cashout ./cmd/api
     startCommand: cd orkapay/services/cashout-engine && ./cashout
     plan: free
-    envGroup: orkapay-production   # <-- REFERÊNCIA AO ENVIRONMENT GROUP
+    envGroups:
+      - orkapay-production
     healthCheckPath: /health
     autoDeploy: true
