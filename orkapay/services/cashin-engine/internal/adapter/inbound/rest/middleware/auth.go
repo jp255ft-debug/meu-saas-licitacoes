@@ -68,8 +68,9 @@ func (p *CachedDBProvider) Validate(apiKey string) (string, bool) {
 func APIKeyAuth(providers ...AuthProvider) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Health check endpoints não exigem autenticação
-			if r.URL.Path == "/health" || r.URL.Path == "/ready" {
+			// Rotas públicas não exigem autenticação
+			path := r.URL.Path
+			if path == "/health" || path == "/ready" || path == "/metrics" || len(path) >= 9 && path[:9] == "/swagger/" {
 				next.ServeHTTP(w, r)
 				return
 			}
