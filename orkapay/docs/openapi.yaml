@@ -1,0 +1,538 @@
+openapi: "3.0.3"
+info:
+  title: OrkaPay API
+  version: "1.0.0"
+  description: |
+    API para gestão de faturas (cash-in) e transferências (cash-out) B2B.
+    Permite criar, emitir, pagar, cancelar e expirar faturas, além de
+    transferências e configuração de webhooks para notificação em tempo real.
+  contact:
+    name: OrkaPay Support
+    email: support@orkapay.com
+  license:
+    name: Proprietary
+    url: https://orkapay.com/terms
+
+servers:
+  - url: http://localhost:8080
+    description: Cash-In Engine (Faturas)
+  - url: http://localhost:8081
+    description: Cash-Out Engine (Transferências)
+
+paths:
+  # ===========================================================================
+  # Health
+  # ===========================================================================
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Verifica se a API está rodando.
+      responses:
+        "200":
+          description: API saudável
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: "healthy" }
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      description: Verifica se a API está pronta para tráfego.
+      responses:
+        "200":
+          description: API pronta
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: "ready" }
+
+  # ===========================================================================
+  # Invoices (Cash-In)
+  # ===========================================================================
+  /api/v1/invoices:
+    post:
+      tags: [Invoices]
+      summary: Criar fatura
+      description: Cria uma nova fatura B2B com status PENDING.
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount_cents, due_date, payer_name, payer_tax_id]
+              properties:
+                amount_cents:
+                  type: integer
+                  example: 150000
+                  description: Valor em centavos (R$ 1.500,00)
+                due_date:
+                  type: string
+                  format: date
+                  example: "2026-08-15"
+                payer_name:
+                  type: string
+                  example: "Empresa XPTO"
+                payer_tax_id:
+                  type: string
+                  example: "12.345.678/0001-99"
+                payer_email:
+                  type: string
+                  example: "financeiro@xpto.com"
+                provider:
+                  type: string
+                  enum: [ASAAS, STARK_BANK]
+                  default: ASAAS
+      responses:
+        "201":
+          description: Fatura criada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimit" }
+
+    get:
+      tags: [Invoices]
+      summary: Listar faturas
+      description: Lista faturas com filtro por status e paginação.
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+          description: "Filtrar por status: PENDING, ISSUED, PAID, CANCELLED, EXPIRED"
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Lista de faturas
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Invoice" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/invoices/{id}:
+    get:
+      tags: [Invoices]
+      summary: Buscar fatura
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Fatura encontrada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/invoices/{id}/issue:
+    post:
+      tags: [Invoices]
+      summary: Emitir fatura
+      description: Emite fatura no provedor externo (PENDING → ISSUED).
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Fatura emitida
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/invoices/{id}/pay:
+    post:
+      tags: [Invoices]
+      summary: Pagar fatura
+      description: Registra pagamento (ISSUED → PAID).
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paid_amount_cents: { type: integer, example: 150000 }
+                payment_method: { type: string, example: "PIX" }
+      responses:
+        "200":
+          description: Fatura paga
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/invoices/{id}/cancel:
+    post:
+      tags: [Invoices]
+      summary: Cancelar fatura
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, example: "Cliente desistiu" }
+      responses:
+        "200":
+          description: Fatura cancelada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/invoices/{id}/expire:
+    post:
+      tags: [Invoices]
+      summary: Expirar fatura
+      description: Marca fatura como expirada (PENDING/ISSUED → EXPIRED).
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Fatura expirada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invoice" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ===========================================================================
+  # Webhooks
+  # ===========================================================================
+  /api/v1/webhooks/configure:
+    post:
+      tags: [Webhooks]
+      summary: Configurar webhook
+      description: Registra URL para receber notificações de eventos.
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, events]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: "https://meu-erp.com/webhooks/orkapay"
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum: [invoice.paid, invoice.expired, invoice.canceled, transfer.settled]
+                  example: ["invoice.paid", "invoice.canceled"]
+      responses:
+        "201":
+          description: Webhook configurado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Webhook" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/webhooks:
+    get:
+      tags: [Webhooks]
+      summary: Listar webhooks
+      security: [{ ApiKeyAuth: [] }]
+      responses:
+        "200":
+          description: Lista de webhooks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Webhook" }
+
+  /api/v1/webhooks/{id}:
+    delete:
+      tags: [Webhooks]
+      summary: Remover webhook
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Webhook removido }
+
+  # ===========================================================================
+  # Transfers (Cash-Out)
+  # ===========================================================================
+  /api/v1/transfers:
+    post:
+      tags: [Transfers]
+      summary: Criar transferência
+      description: Cria transferência PIX para um beneficiário.
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount_cents, payee_name, payee_tax_id, payee_pix_key, payee_pix_type]
+              properties:
+                amount_cents: { type: integer, example: 50000 }
+                payee_name: { type: string, example: "Fornecedor LTDA" }
+                payee_tax_id: { type: string, example: "98.765.432/0001-11" }
+                payee_pix_key: { type: string, example: "fornecedor@email.com" }
+                payee_pix_type: { type: string, enum: [EMAIL, CPF, CNPJ, PHONE, EVP], example: "EMAIL" }
+                description: { type: string, example: "Pagamento nota fiscal 1234" }
+      responses:
+        "201":
+          description: Transferência criada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Transfer" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+    get:
+      tags: [Transfers]
+      summary: Listar transferências
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: offset
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Lista de transferências
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Transfer" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/transfers/{id}:
+    get:
+      tags: [Transfers]
+      summary: Buscar transferência
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Transferência encontrada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Transfer" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/transfers/{id}/approve:
+    post:
+      tags: [Transfers]
+      summary: Aprovar transferência
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Transferência aprovada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Transfer" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/transfers/{id}/settle:
+    post:
+      tags: [Transfers]
+      summary: Liquidar transferência
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Transferência liquidada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Transfer" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/transfers/{id}/fail:
+    post:
+      tags: [Transfers]
+      summary: Falhar transferência
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Transferência marcada como falha
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Transfer" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/transfers/{id}/cancel:
+    post:
+      tags: [Transfers]
+      summary: Cancelar transferência
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Transferência cancelada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Transfer" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API Key gerada durante o onboarding.
+
+  schemas:
+    Invoice:
+      type: object
+      properties:
+        id: { type: string, example: "PAY-1749000000000000000" }
+        amount_cents: { type: integer, example: 150000 }
+        status:
+          type: string
+          enum: [PENDING, ISSUED, PAID, CANCELLED, EXPIRED, REFUNDED]
+        due_date: { type: string, format: date }
+        payer_name: { type: string }
+        payer_tax_id: { type: string }
+        provider: { type: string }
+        external_id: { type: string, nullable: true }
+        pix_qr_code: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Transfer:
+      type: object
+      properties:
+        id: { type: string, example: "TRF-1749000000000000000" }
+        amount_cents: { type: integer, example: 50000 }
+        status:
+          type: string
+          enum: [PENDING, PROCESSING, APPROVED, SETTLED, FAILED, CANCELLED]
+        payee_name: { type: string }
+        payee_tax_id: { type: string }
+        payee_pix_key: { type: string }
+        external_id: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Webhook:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        events:
+          type: array
+          items: { type: string }
+        active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+
+  responses:
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unauthorized:
+      description: API Key inválida ou ausente
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    RateLimit:
+      description: Limite de requisições excedido
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }

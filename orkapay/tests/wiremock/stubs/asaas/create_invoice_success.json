@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/api/v3/invoices",
+    "headers": {
+      "access_token": { "matches": ".*" }
+    }
+  },
+  "response": {
+    "status": 201,
+    "jsonBody": {
+      "id": "inv_wiremock_12345",
+      "status": "PENDING",
+      "value": "{{jsonPath request.body '$.amount_cents'}}",
+      "dueDate": "{{jsonPath request.body '$.due_date'}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

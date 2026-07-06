@@ -31,34 +31,34 @@ const (
 type PaymentMethod string
 
 const (
-	PaymentMethodPixQRCode  PaymentMethod = "PIX_QRCODE"
+	PaymentMethodPixQRCode    PaymentMethod = "PIX_QRCODE"
 	PaymentMethodPixCopyPaste PaymentMethod = "PIX_COPY_PASTE"
-	PaymentMethodBoletoPrint PaymentMethod = "BOLETO_PRINT"
+	PaymentMethodBoletoPrint  PaymentMethod = "BOLETO_PRINT"
 	PaymentMethodBoletoHybrid PaymentMethod = "BOLETO_HYBRID"
 )
 
 // Payer representa o pagador.
 type Payer struct {
-	Name      string
-	TaxID     string // CPF ou CNPJ
-	Email     string
-	PixKey    PixKey
+	Name   string
+	TaxID  string // CPF ou CNPJ
+	Email  string
+	PixKey PixKey
 }
 
 // Payee representa o beneficiário.
 type Payee struct {
-	Name   string
-	TaxID  string
-	PixKey PixKey
+	Name        string
+	TaxID       string
+	PixKey      PixKey
 	BankAccount *BankAccount
 }
 
 // BankAccount representa dados bancários.
 type BankAccount struct {
-	BankCode    string
-	Branch      string
+	BankCode      string
+	Branch        string
 	AccountNumber string
-	AccountType string // CHECKING, SAVINGS
+	AccountType   string // CHECKING, SAVINGS
 }
 
 // Payment é o Aggregate Root do domínio de pagamentos.
@@ -96,23 +96,23 @@ type DomainEvent interface {
 
 // Payment getters (read-only acesso externo)
 
-func (p *Payment) ID() string              { return p.id }
-func (p *Payment) ExternalID() string      { return p.externalID }
+func (p *Payment) ID() string               { return p.id }
+func (p *Payment) ExternalID() string       { return p.externalID }
 func (p *Payment) Status() PaymentStatus    { return p.status }
 func (p *Payment) PaymentType() PaymentType { return p.paymentType }
 func (p *Payment) Method() PaymentMethod    { return p.method }
 func (p *Payment) Amount() Money            { return p.amount }
 func (p *Payment) Fee() Money               { return p.fee }
-func (p *Payment) NetAmount() Money          { return p.netAmount }
+func (p *Payment) NetAmount() Money         { return p.netAmount }
 func (p *Payment) Payer() Payer             { return p.payer }
 func (p *Payment) Payee() Payee             { return p.payee }
 func (p *Payment) Description() string      { return p.description }
 func (p *Payment) ExpiresAt() *time.Time    { return p.expiresAt }
-func (p *Payment) ProcessedAt() *time.Time { return p.processedAt }
+func (p *Payment) ProcessedAt() *time.Time  { return p.processedAt }
 func (p *Payment) SettledAt() *time.Time    { return p.settledAt }
 func (p *Payment) FailedAt() *time.Time     { return p.failedAt }
 func (p *Payment) CancelledAt() *time.Time  { return p.cancelledAt }
-func (p *Payment) FailureReason() string     { return p.failureReason }
+func (p *Payment) FailureReason() string    { return p.failureReason }
 func (p *Payment) Metadata() map[string]string {
 	// Retorna cópia para imutabilidade
 	m := make(map[string]string, len(p.metadata))
@@ -234,11 +234,11 @@ func (p *Payment) Settle() error {
 	p.version++
 
 	p.emit(PaymentSettledEvent{
-		PaymentID:  p.id,
-		Amount:     p.amount.Cents(),
-		NetAmount:  p.netAmount.Cents(),
-		Fee:        p.fee.Cents(),
-		Timestamp:  now,
+		PaymentID: p.id,
+		Amount:    p.amount.Cents(),
+		NetAmount: p.netAmount.Cents(),
+		Fee:       p.fee.Cents(),
+		Timestamp: now,
 	})
 
 	return nil
@@ -264,10 +264,10 @@ func (p *Payment) Fail(reason string) error {
 	p.version++
 
 	p.emit(PaymentFailedEvent{
-		PaymentID:  p.id,
-		Reason:     reason,
-		Amount:     p.amount.Cents(),
-		Timestamp:  now,
+		PaymentID: p.id,
+		Reason:    reason,
+		Amount:    p.amount.Cents(),
+		Timestamp: now,
 	})
 
 	return nil
@@ -286,9 +286,9 @@ func (p *Payment) Cancel(reason string) error {
 	p.version++
 
 	p.emit(PaymentCancelledEvent{
-		PaymentID:  p.id,
-		Reason:     reason,
-		Timestamp:  now,
+		PaymentID: p.id,
+		Reason:    reason,
+		Timestamp: now,
 	})
 
 	return nil
@@ -389,7 +389,7 @@ type PaymentCreatedEvent struct {
 	Timestamp   time.Time
 }
 
-func (e PaymentCreatedEvent) EventName() string    { return "payment.created" }
+func (e PaymentCreatedEvent) EventName() string     { return "payment.created" }
 func (e PaymentCreatedEvent) OccurredAt() time.Time { return e.Timestamp }
 
 // PaymentApprovedEvent — emitido quando o gateway aprova.
@@ -400,38 +400,38 @@ type PaymentApprovedEvent struct {
 	Timestamp  time.Time
 }
 
-func (e PaymentApprovedEvent) EventName() string    { return "payment.approved" }
+func (e PaymentApprovedEvent) EventName() string     { return "payment.approved" }
 func (e PaymentApprovedEvent) OccurredAt() time.Time { return e.Timestamp }
 
 // PaymentSettledEvent — emitido quando o dinheiro cai na conta.
 type PaymentSettledEvent struct {
-	PaymentID  string
-	Amount     int64
-	NetAmount  int64
-	Fee        int64
-	Timestamp  time.Time
+	PaymentID string
+	Amount    int64
+	NetAmount int64
+	Fee       int64
+	Timestamp time.Time
 }
 
-func (e PaymentSettledEvent) EventName() string    { return "payment.settled" }
+func (e PaymentSettledEvent) EventName() string     { return "payment.settled" }
 func (e PaymentSettledEvent) OccurredAt() time.Time { return e.Timestamp }
 
 // PaymentFailedEvent — emitido quando o pagamento falha.
 type PaymentFailedEvent struct {
-	PaymentID  string
-	Reason     string
-	Amount     int64
-	Timestamp  time.Time
+	PaymentID string
+	Reason    string
+	Amount    int64
+	Timestamp time.Time
 }
 
-func (e PaymentFailedEvent) EventName() string    { return "payment.failed" }
+func (e PaymentFailedEvent) EventName() string     { return "payment.failed" }
 func (e PaymentFailedEvent) OccurredAt() time.Time { return e.Timestamp }
 
 // PaymentCancelledEvent — emitido quando o pagamento é cancelado.
 type PaymentCancelledEvent struct {
-	PaymentID  string
-	Reason     string
-	Timestamp  time.Time
+	PaymentID string
+	Reason    string
+	Timestamp time.Time
 }
 
-func (e PaymentCancelledEvent) EventName() string    { return "payment.cancelled" }
+func (e PaymentCancelledEvent) EventName() string     { return "payment.cancelled" }
 func (e PaymentCancelledEvent) OccurredAt() time.Time { return e.Timestamp }

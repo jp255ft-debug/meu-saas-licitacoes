@@ -1,3 +1,18 @@
+# Environment files (NUNCA commitar .env real!)
+.env
+.env.*
+!.env.example
+
+# Secrets and private keys
+*.pem
+*.key
+*.crt
+*.secret
+secrets/
+credentials/
+*.pfx
+*.p12
+
 # Compiled files
 *.exe
 *.exe~
@@ -12,11 +27,6 @@ node_modules/
 vendor/
 bin/
 pkg/
-
-# Environment files
-.env
-.env.local
-.env.*.local
 
 # IDE
 .idea/
@@ -38,6 +48,8 @@ dist/
 build/
 coverage/
 *.coverprofile
+coverage.out
+*.cov
 
 # Temporary files
 tmp/
@@ -45,9 +57,12 @@ temp/
 *.tmp
 
 # Go specific
-go.sum
-go.mod
+go.work
+go.work.sum
 /vendor/
 
 # Docker
 *.pid
+
+# Test coverage
+services/*/coverage

@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/api/v3/invoices",
+    "headers": {
+      "access_token": { "matches": ".*" }
+    }
+  },
+  "response": {
+    "status": 500,
+    "fixedDelayMilliseconds": 1000,
+    "jsonBody": {
+      "error": "Internal Server Error",
+      "code": "INTERNAL_ERROR",
+      "description": "Ocorreu um erro interno no processamento"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

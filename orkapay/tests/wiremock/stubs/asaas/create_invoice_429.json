@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/api/v3/invoices",
+    "headers": {
+      "access_token": { "matches": ".*" }
+    }
+  },
+  "response": {
+    "status": 429,
+    "jsonBody": {
+      "error": "Too Many Requests",
+      "code": "RATE_LIMIT_EXCEEDED",
+      "description": "Você excedeu o limite de requisições"
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Retry-After": "30"
+    }
+  }
+}

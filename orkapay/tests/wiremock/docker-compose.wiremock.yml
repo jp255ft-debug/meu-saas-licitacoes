@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  wiremock:
+    image: wiremock/wiremock:latest
+    container_name: orkapay-wiremock
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./stubs:/home/wiremock/mappings
+    command: --global-response-templating --verbose

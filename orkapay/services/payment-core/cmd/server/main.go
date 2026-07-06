@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"context"
@@ -48,16 +48,29 @@ func main() {
 	// Mock de Kafka (MVP)
 	pub := kafka.NewMockEventPublisher()
 
+	// --- Gateway de Pagamento ---
+	// Se ASAAS_API_KEY estiver configurada, usa cliente real; senao, usa mock
+	var gw port.PaymentGateway
+	asaasAPIKey := getEnv("ASAAS_API_KEY", "")
+	if asaasAPIKey != "" {
+		asaasBaseURL := getEnv("ASAAS_BASE_URL", "https://sandbox.asaas.com/api/v3")
+		asaasClient := asaas.NewClient(asaasBaseURL, asaasAPIKey, 30*time.Second)
+		gw = asaas.NewPaymentGateway(asaasClient)
+		fmt.Println("✅ Gateway Asaas real configurado")
+	} else {
+		gw = port.NewMockPaymentGateway()
+		fmt.Println("ℹ️ Usando gateway mock (ASAAS_API_KEY nao configurada)")
+	}
+
 	// Casos de uso
 	createUC := application.NewCreatePaymentUseCase(repo, pub)
-	// Para o MVP, o gateway Ã© nil â€” Process e Cancel retornarÃ£o erro
-	// Em produÃ§Ã£o, injetar gateway real (Asaas)
-	var processorUC *application.ProcessPaymentUseCase
-	var cancelUC *application.CancelPaymentUseCase
+	processorUC := application.NewProcessPaymentUseCase(repo, pub, gw)
+	cancelUC := application.NewCancelPaymentUseCase(repo, pub, gw)
+	getUC := application.NewGetPaymentUseCase(repo)
 	webhookUC := application.NewWebhookPaymentUseCase(repo, pub)
 
 	// Handlers
-	paymentHandler := handler.NewPaymentHandler(createUC, processorUC, cancelUC, webhookUC)
+	paymentHandler := handler.NewPaymentHandler(createUC, processorUC, cancelUC, getUC, webhookUC)
 	healthHandler := handler.NewHealthHandler()
 
 	// Router

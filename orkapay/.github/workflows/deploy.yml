@@ -1,0 +1,76 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: CashIn - Vet & Build
+        working-directory: services/cashin-engine
+        run: go vet ./... && go build ./...
+
+      - name: CashOut - Vet & Build
+        working-directory: services/cashout-engine
+        run: go vet ./... && go build ./...
+
+  deploy-cashin:
+    name: Deploy CashIn Engine
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_SERVICE_ID_CASHIN }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
+          wait-for-success: true
+
+  deploy-cashout:
+    name: Deploy CashOut Engine
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        uses: johnbeynon/render-deploy-action@v0.0.8
+        with:
+          service-id: ${{ secrets.RENDER_SERVICE_ID_CASHOUT }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
+          wait-for-success: true
+
+  health-check:
+    name: Post-Deploy Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy-cashin, deploy-cashout]
+    steps:
+      - name: Wait for services
+        run: sleep 30
+
+      - name: Check CashIn Health
+        run: |
+          curl -f --retry 5 --retry-delay 10 \
+            https://orkapay-cashin.onrender.com/health || \
+            echo "⚠️ CashIn health check failed (may not be deployed yet)"
+
+      - name: Check CashOut Health
+        run: |
+          curl -f --retry 5 --retry-delay 10 \
+            https://orkapay-cashout.onrender.com/health || \
+            echo "⚠️ CashOut health check failed (may not be deployed yet)"

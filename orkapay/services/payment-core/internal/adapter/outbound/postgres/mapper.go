@@ -1,4 +1,4 @@
-﻿package postgres
+package postgres
 
 import (
 	"time"
@@ -63,10 +63,10 @@ func fromDomain(p *domain.Payment) *paymentDB {
 		PayeeTaxID:       p.Payee().TaxID,
 		PayeePixKey:      strPtr(p.Payee().PixKey.Value()),
 		PayeePixType:     strPtr(string(p.Payee().PixKey.Type())),
-		PayeeBankCode:    strPtrSafe(p.Payee().BankAccount, func(ba *domain.BankAccount) string { return ba.BankCode }),
-		PayeeBranch:      strPtrSafe(p.Payee().BankAccount, func(ba *domain.BankAccount) string { return ba.Branch }),
-		PayeeAccount:     strPtrSafe(p.Payee().BankAccount, func(ba *domain.BankAccount) string { return ba.AccountNumber }),
-		PayeeAccountType: strPtrSafe(p.Payee().BankAccount, func(ba *domain.BankAccount) string { return ba.AccountType }),
+		PayeeBankCode:    strPtrSafe(p.Payee().BankAccount, func(ba domain.BankAccount) string { return ba.BankCode }),
+		PayeeBranch:      strPtrSafe(p.Payee().BankAccount, func(ba domain.BankAccount) string { return ba.Branch }),
+		PayeeAccount:     strPtrSafe(p.Payee().BankAccount, func(ba domain.BankAccount) string { return ba.AccountNumber }),
+		PayeeAccountType: strPtrSafe(p.Payee().BankAccount, func(ba domain.BankAccount) string { return ba.AccountType }),
 		Description:      p.Description(),
 		ExpiresAt:        p.ExpiresAt(),
 		ProcessedAt:      p.ProcessedAt(),

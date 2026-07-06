@@ -10,14 +10,14 @@ import (
 
 // DBConfig contém as configurações de conexão com PostgreSQL.
 type DBConfig struct {
-	Host         string
-	Port         string
-	User         string
-	Password     string
-	Database     string
-	SSLMode      string
-	MaxConns     int32
-	MinConns     int32
+	Host            string
+	Port            string
+	User            string
+	Password        string
+	Database        string
+	SSLMode         string
+	MaxConns        int32
+	MinConns        int32
 	MaxConnLifetime time.Duration
 	MaxConnIdleTime time.Duration
 }

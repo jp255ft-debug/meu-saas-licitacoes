@@ -1,42 +1,76 @@
 version: '3.8'
 
 services:
-  postgres:
+  # Banco de dados do cashin
+  cashin-db:
     image: postgres:16-alpine
-    container_name: orkapay-postgres-dev
+    container_name: orkapay-cashin-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: orkapay_dev
+      POSTGRES_USER: cashin
+      POSTGRES_PASSWORD: cashin
+      POSTGRES_DB: cashin
     ports:
-      - "5432:5432"
+      - "5434:5432"
+    volumes:
+      - cashin_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cashin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: orkapay-redis-dev
-    ports:
-      - "6379:6379"
-
-  kafka:
-    image: bitnami/kafka:latest
-    container_name: orkapay-kafka-dev
-    ports:
-      - "9092:9092"
+  # Banco de dados do cashout
+  cashout-db:
+    image: postgres:16-alpine
+    container_name: orkapay-cashout-db
     environment:
-      KAFKA_CFG_NODE_ID: 0
-      KAFKA_CFG_PROCESS_ROLES: controller,broker
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
-      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: orkapay-rabbitmq-dev
+      POSTGRES_USER: cashout
+      POSTGRES_PASSWORD: cashout
+      POSTGRES_DB: cashout
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5435:5432"
+    volumes:
+      - cashout_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cashout"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API cashin
+  cashin-api:
+    build:
+      context: ./services/cashin-engine
+      dockerfile: Dockerfile
+    container_name: orkapay-cashin-api
+    ports:
+      - "8080:8080"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      DATABASE_URL: postgres://cashin:cashin@cashin-db:5432/cashin?sslmode=disable
+      SERVER_PORT: 8080
+      API_KEYS: demo-key:ClienteDemo,teste:Teste
+      LOG_LEVEL: debug
+    depends_on:
+      cashin-db:
+        condition: service_healthy
+
+  # API cashout
+  cashout-api:
+    build:
+      context: ./services/cashout-engine
+      dockerfile: Dockerfile
+    container_name: orkapay-cashout-api
+    ports:
+      - "8081:8080"
+    environment:
+      DATABASE_URL: postgres://cashout:cashout@cashout-db:5432/cashout?sslmode=disable
+      SERVER_PORT: 8080
+      API_KEYS: demo-key:ClienteDemo,teste:Teste
+      LOG_LEVEL: debug
+    depends_on:
+      cashout-db:
+        condition: service_healthy
+
+volumes:
+  cashin_data:
+  cashout_data:

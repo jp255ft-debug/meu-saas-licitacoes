@@ -1,0 +1,142 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: CashIn - Unit Tests
+        working-directory: services/cashin-engine
+        run: go test ./... -short -count=1
+
+      - name: CashOut - Unit Tests
+        working-directory: services/cashout-engine
+        run: go test ./... -short -count=1
+
+      - name: Payment Core - Unit Tests
+        working-directory: services/payment-core
+        run: go test ./... -short -count=1
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: CashIn - Integration Tests (Testcontainers)
+        working-directory: services/cashin-engine
+        run: go test ./... -tags=integration -count=1 -v -timeout 120s
+
+      - name: CashOut - Integration Tests (Testcontainers)
+        working-directory: services/cashout-engine
+        run: go test ./... -tags=integration -count=1 -v -timeout 120s
+
+      - name: Payment Core - Integration Tests (Testcontainers)
+        working-directory: services/payment-core
+        run: go test ./... -tags=integration -count=1 -v -timeout 120s
+
+  toxiproxy-tests:
+    name: Toxiproxy Tests (Network Resilience)
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Toxiproxy - Network Failure Simulation
+        working-directory: tests/toxiproxy
+        run: go test ./... -tags=toxiproxy -count=1 -v -timeout 300s
+
+  load-tests:
+    name: Load Tests (k6)
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Environment
+        run: |
+          docker compose -f docker-compose.dev.yml up -d --build
+          sleep 15
+
+      - name: Run k6 Load Tests
+        uses: grafana/k6-action@v0.3.0
+        with:
+          filename: tests/load/k6-load-test.js
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v
+
+  chaos-tests:
+    name: Chaos Engineering Tests (Pumba)
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Environment
+        run: |
+          docker compose -f docker-compose.dev.yml up -d --build
+          sleep 15
+
+      - name: Pull Pumba Image
+        run: docker pull gaiaadm/pumba:latest
+
+      - name: Run Chaos Tests
+        run: bash tests/chaos/chaos_test.sh
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v
+
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: services/cashin-engine
+
+      - name: Check Go Mod Tidy
+        working-directory: services/cashin-engine
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum || \
+            (echo "go.mod ou go.sum não estão atualizados. Execute 'go mod tidy'." && exit 1)
+
+      - name: Vet Check
+        working-directory: services/cashin-engine
+        run: go vet ./...

@@ -1,9 +1,11 @@
-﻿package handler
+package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/jp255ft-debug/payment-core/internal/core/domain"
 	"github.com/jp255ft-debug/payment-core/internal/core/port"
 )
 
@@ -12,6 +14,7 @@ type PaymentHandler struct {
 	creator   port.PaymentCreator
 	processor port.PaymentProcessor
 	canceller port.PaymentCanceller
+	getter    port.PaymentGetter
 	webhook   port.PaymentWebhookHandler
 }
 
@@ -20,12 +23,14 @@ func NewPaymentHandler(
 	creator port.PaymentCreator,
 	processor port.PaymentProcessor,
 	canceller port.PaymentCanceller,
+	getter port.PaymentGetter,
 	webhook port.PaymentWebhookHandler,
 ) *PaymentHandler {
 	return &PaymentHandler{
 		creator:   creator,
 		processor: processor,
 		canceller: canceller,
+		getter:    getter,
 		webhook:   webhook,
 	}
 }
@@ -113,9 +118,18 @@ func (h *PaymentHandler) GetPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Para o MVP, usamos o processor para buscar (ou criar um getter separado)
-	// Aqui simplificamos retornando 501 â€” o getter serÃ¡ implementado no futuro
-	respondError(w, http.StatusNotImplemented, "not_implemented", "busca por ID serÃ¡ implementada em breve")
+	payment, err := h.getter.GetByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrPaymentNotFound) {
+			respondError(w, http.StatusNotFound, "not_found", "pagamento nao encontrado")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "internal_error", err.Error())
+		return
+	}
+
+	output := port.MapToOutput(payment)
+	respondJSON(w, http.StatusOK, output)
 }
 
 // CancelPaymentRequest representa o body da requisiÃ§Ã£o de cancelamento.

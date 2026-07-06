@@ -1,4 +1,4 @@
-﻿package application
+package application
 
 import (
 	"context"
@@ -49,7 +49,7 @@ func (uc *ProcessPaymentUseCase) Process(ctx context.Context, paymentID string) 
 			return nil, fmt.Errorf("falha ao salvar pagamento apÃ³s falha: %w", saveErr)
 		}
 		uc.publishEvents(ctx, payment)
-		return mapToOutput(payment), fmt.Errorf("gateway rejeitou: %w", err)
+		return port.MapToOutput(payment), fmt.Errorf("gateway rejeitou: %w", err)
 	}
 
 	// 4. Aprovar pagamento com ID externo do gateway
@@ -65,7 +65,7 @@ func (uc *ProcessPaymentUseCase) Process(ctx context.Context, paymentID string) 
 	// 6. Publicar eventos
 	uc.publishEvents(ctx, payment)
 
-	return mapToOutput(payment), nil
+	return port.MapToOutput(payment), nil
 }
 
 // publishEvents publica os eventos pendentes do aggregate.

@@ -9,17 +9,17 @@ import (
 type PixKeyType string
 
 const (
-	PixKeyCPF        PixKeyType = "CPF"
-	PixKeyCNPJ       PixKeyType = "CNPJ"
-	PixKeyEmail      PixKeyType = "EMAIL"
-	PixKeyPhone      PixKeyType = "PHONE"
-	PixKeyEVP        PixKeyType = "EVP" // Chave aleatória (EvP)
+	PixKeyCPF   PixKeyType = "CPF"
+	PixKeyCNPJ  PixKeyType = "CNPJ"
+	PixKeyEmail PixKeyType = "EMAIL"
+	PixKeyPhone PixKeyType = "PHONE"
+	PixKeyEVP   PixKeyType = "EVP" // Chave aleatória (EvP)
 )
 
 // PixKey representa uma chave Pix validada.
 // Value Object imutável.
 type PixKey struct {
-	value string
+	value   string
 	keyType PixKeyType
 }
 

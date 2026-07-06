@@ -104,7 +104,7 @@ func TestMoney_Divide_ByZero(t *testing.T) {
 
 func TestMoney_Percent(t *testing.T) {
 	m := MustNewMoney(10000) // R$ 100,00
-	result := m.Percent(10) // 10%
+	result := m.Percent(10)  // 10%
 	if result.Cents() != 1000 {
 		t.Errorf("esperado 1000 centavos (10%% de 10000), got: %d", result.Cents())
 	}

@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/api/v1/transfers",
+    "headers": {
+      "Authorization": { "matches": ".*" }
+    }
+  },
+  "response": {
+    "status": 201,
+    "jsonBody": {
+      "id": "trf_wiremock_12345",
+      "status": "PROCESSING",
+      "amount": "{{jsonPath request.body '$.amount_cents'}}",
+      "created": "2026-07-03T10:00:00Z"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

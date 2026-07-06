@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: orkapay-cashin
+    env: go
+    buildCommand: cd services/cashin-engine && go build -o cashin ./cmd/api
+    startCommand: cd services/cashin-engine && ./cashin
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SERVER_PORT
+        value: "8080"
+      - key: API_KEYS
+        sync: false
+      - key: LOG_LEVEL
+        value: "info"
+      - key: LOG_JSON
+        value: "true"
+      - key: RATE_LIMIT_MAX
+        value: "100"
+      - key: RATE_LIMIT_WINDOW
+        value: "1m"
+    healthCheckPath: /health
+    autoDeploy: true
+
+  - type: web
+    name: orkapay-cashout
+    env: go
+    buildCommand: cd services/cashout-engine && go build -o cashout ./cmd/api
+    startCommand: cd services/cashout-engine && ./cashout
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SERVER_PORT
+        value: "8080"
+      - key: API_KEYS
+        sync: false
+      - key: LOG_LEVEL
+        value: "info"
+      - key: LOG_JSON
+        value: "true"
+    healthCheckPath: /health
+    autoDeploy: true

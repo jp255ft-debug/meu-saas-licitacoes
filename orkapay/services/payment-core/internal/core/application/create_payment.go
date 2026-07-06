@@ -1,4 +1,4 @@
-﻿package application
+package application
 
 import (
 	"context"
@@ -87,11 +87,11 @@ func (uc *CreatePaymentUseCase) Create(ctx context.Context, input port.CreatePay
 		}
 	}
 
-	return mapToOutput(payment), nil
+	return port.MapToOutput(payment), nil
 }
 
-// mapToOutput converte um domain.Payment para PaymentOutput.
-func mapToOutput(p *domain.Payment) *port.PaymentOutput {
+// MapToOutput converte um domain.Payment para PaymentOutput.
+func MapToOutput(p *domain.Payment) *port.PaymentOutput {
 	return &port.PaymentOutput{
 		ID:          p.ID(),
 		Status:      string(p.Status()),
@@ -105,13 +105,13 @@ func mapToOutput(p *domain.Payment) *port.PaymentOutput {
 		PayeeName:   p.Payee().Name,
 		PayeeTaxID:  p.Payee().TaxID,
 		Description: p.Description(),
-		ExpiresAt:   formatTime(p.ExpiresAt()),
+		ExpiresAt:   FormatTime(p.ExpiresAt()),
 		CreatedAt:   p.CreatedAt().Format(time.RFC3339),
 	}
 }
 
-// formatTime formata um *time.Time para string RFC3339 ou vazio.
-func formatTime(t *time.Time) string {
+// FormatTime formata um *time.Time para string RFC3339 ou vazio.
+func FormatTime(t *time.Time) string {
 	if t == nil {
 		return ""
 	}

@@ -1,10 +1,9 @@
-﻿package application
+package application
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/jp255ft-debug/payment-core/internal/core/domain"
 	"github.com/jp255ft-debug/payment-core/internal/core/port"
 )
 

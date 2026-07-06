@@ -1,4 +1,4 @@
-﻿package application
+package application
 
 import (
 	"context"
@@ -60,7 +60,7 @@ func (uc *CancelPaymentUseCase) Cancel(ctx context.Context, paymentID string, re
 	// 6. Publicar eventos
 	uc.publishEvents(ctx, payment)
 
-	return mapToOutput(payment), nil
+	return port.MapToOutput(payment), nil
 }
 
 // publishEvents publica os eventos pendentes do aggregate.

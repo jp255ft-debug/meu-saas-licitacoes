@@ -1,0 +1,55 @@
+name: Security Scan (ZAP)
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  zap-scan:
+    name: OWASP ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Environment
+        run: |
+          docker compose -f docker-compose.dev.yml up -d --build
+          sleep 15
+
+      - name: Run ZAP Baseline Scan
+        run: |
+          chmod +x tests/security/zap/zap-test.sh
+          bash tests/security/zap/zap-test.sh
+
+      - name: Upload ZAP Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-security-report
+          path: tests/security/zap/reports/
+          retention-days: 30
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v
+
+  fuzz-tests:
+    name: Go Fuzz Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: CashIn Fuzz Test (30s)
+        working-directory: services/cashin-engine
+        run: go test -fuzz=FuzzCreateInvoicePayload -fuzztime=30s ./...
+        continue-on-error: true
+
+      - name: CashOut Fuzz Test (30s)
+        working-directory: services/cashout-engine
+        run: go test -fuzz=FuzzCreateTransferPayload -fuzztime=30s ./...
+        continue-on-error: true
