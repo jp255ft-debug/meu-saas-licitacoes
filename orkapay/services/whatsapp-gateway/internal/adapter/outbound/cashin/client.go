@@ -20,23 +20,24 @@ type CreateInvoiceRequest struct {
 	AmountCents int64  `json:"amount_cents"`
 	DueDate     string `json:"due_date"`
 	PayerName   string `json:"payer_name"`
+	PayerTaxID  string `json:"payer_tax_id"`
 	Provider    string `json:"provider"`
 }
 
 type InvoiceResponse struct {
-	ID        string `json:"id"`
-	Status    string `json:"status"`
-	PixQRCode string `json:"pix_qr_code"`
-	PixKey    string `json:"pix_key"`
-	InvoiceURL string `json:"invoice_url"`
+	ID        string `json:"ID"`
+	Status    string `json:"Status"`
+	PixQRCode string `json:"PixQRCode"`
+	PixKey    string `json:"PixKey"`
+	InvoiceURL string `json:"InvoiceURL"`
 }
 
 type IssueResponse struct {
-	ID        string `json:"id"`
-	Status    string `json:"status"`
-	PixQRCode string `json:"pix_qr_code"`
-	PixKey    string `json:"pix_key"`
-	InvoiceURL string `json:"invoice_url"`
+	ID        string `json:"ID"`
+	Status    string `json:"Status"`
+	PixQRCode string `json:"PixQRCode"`
+	PixKey    string `json:"PixKey"`
+	InvoiceURL string `json:"InvoiceURL"`
 }
 
 func NewClient(baseURL, apiKey string) *Client {
@@ -54,6 +55,7 @@ func (c *Client) CreateAndIssueInvoice(ctx context.Context, amountCents int64, p
 		AmountCents: amountCents,
 		DueDate:     dueDate,
 		PayerName:   payerName,
+		PayerTaxID:  "00000000000",
 		Provider:    "ASAAS",
 	}
 
