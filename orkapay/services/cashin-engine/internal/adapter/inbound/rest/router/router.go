@@ -16,6 +16,7 @@ func New(
 	webhookSvc *webhook.WebhookService,
 	authProviders []middleware.AuthProvider,
 	rateLimiter *middleware.RateLimiter,
+	asaasWebhookHandler *handler.AsaasWebhookHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -27,6 +28,11 @@ func New(
 	healthH := handler.NewHealthHandler()
 	mux.HandleFunc("GET /health", healthH.Health)
 	mux.HandleFunc("GET /ready", healthH.Ready)
+
+	// Asaas webhook endpoint (público, validado por token no header)
+	if asaasWebhookHandler != nil {
+		mux.HandleFunc("POST /api/v1/webhooks/asaas", asaasWebhookHandler.HandleWebhook)
+	}
 
 	// Invoice endpoints (autenticados)
 	invoiceH := handler.NewInvoiceHandler(invoiceSvc)

@@ -4,18 +4,14 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"time"
-
-	"github.com/jp255ft-debug/cashin-engine/internal/core/domain/event"
-	"github.com/jp255ft-debug/cashin-engine/internal/core/port/outbound"
 )
 
 type AsaasWebhookHandler struct {
-	eventPublisher outbound.EventPublisher
+	webhookToken string
 }
 
-func NewAsaasWebhookHandler(publisher outbound.EventPublisher) *AsaasWebhookHandler {
-	return &AsaasWebhookHandler{eventPublisher: publisher}
+func NewAsaasWebhookHandler(webhookToken string) *AsaasWebhookHandler {
+	return &AsaasWebhookHandler{webhookToken: webhookToken}
 }
 
 type AsaasWebhookPayload struct {
@@ -43,6 +39,17 @@ type AsaasWebhookPayload struct {
 func (h *AsaasWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	// Valida o token de autenticação enviado pelo Asaas no header
+	token := r.Header.Get("asaas-access-token")
+	if token == "" || token != h.webhookToken {
+		slog.WarnContext(ctx, "unauthorized webhook attempt",
+			"provided_token", token != "",
+			"has_token_configured", h.webhookToken != "",
+		)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var payload AsaasWebhookPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		slog.WarnContext(ctx, "failed to decode asaas webhook payload", "error", err)
@@ -56,26 +63,6 @@ func (h *AsaasWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Reque
 		"external_id", payload.Payment.ExternalID,
 		"status", payload.Payment.Status,
 	)
-
-	if payload.Event == "PAYMENT_RECEIVED" || payload.Event == "PAYMENT_CONFIRMED" {
-		paymentEvent := &event.PaymentConfirmedEvent{
-			PaymentID:  payload.Payment.ID,
-			ExternalID: payload.Payment.ExternalID,
-			Amount:     int64(payload.Payment.Value * 100),
-			Status:     payload.Payment.Status,
-			PixQRCode:  payload.Payment.PixQRCode,
-			PixKey:     payload.Payment.PixKey,
-			Barcode:    payload.Payment.Barcode,
-			InvoiceURL: payload.Payment.InvoiceURL,
-			OccurredAt: time.Now(),
-		}
-
-		if err := h.eventPublisher.PublishPaymentConfirmed(ctx, paymentEvent); err != nil {
-			slog.ErrorContext(ctx, "failed to publish payment event", "error", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
-	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "received"})

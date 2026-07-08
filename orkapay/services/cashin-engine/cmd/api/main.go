@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jp255ft-debug/cashin-engine/internal/adapter/inbound/rest/handler"
 	"github.com/jp255ft-debug/cashin-engine/internal/adapter/inbound/rest/middleware"
 	"github.com/jp255ft-debug/cashin-engine/internal/adapter/inbound/rest/router"
 	"github.com/jp255ft-debug/cashin-engine/internal/adapter/outbound/postgres"
@@ -100,8 +101,11 @@ func main() {
 		authProviders = append(authProviders, dbProvider)
 	}
 
+	// 6a. Instanciar Asaas webhook handler
+	asaasWebhookHandler := handler.NewAsaasWebhookHandler(cfg.AsaasWebhookToken)
+
 	rateLimiter := middleware.NewRateLimiter(100, 1*time.Minute)
-	httpHandler := router.New(svc, webhookSvc, authProviders, rateLimiter)
+	httpHandler := router.New(svc, webhookSvc, authProviders, rateLimiter, asaasWebhookHandler)
 
 	// 7. Servidor HTTP
 	server := &http.Server{
