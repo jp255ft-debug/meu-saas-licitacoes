@@ -2,8 +2,8 @@ services:
   - type: web
     name: orkapay-cashin
     env: go
-    buildCommand: cd services/cashin-engine && go build -o cashin ./cmd/api
-    startCommand: cd services/cashin-engine && ./cashin
+    buildCommand: cd orkapay/services/cashin-engine && go build -o cashin ./cmd/api
+    startCommand: cd orkapay/services/cashin-engine && ./cashin
     plan: free
     envVars:
       - fromGroup: orkapay-production
@@ -13,8 +13,19 @@ services:
   - type: web
     name: orkapay-cashout
     env: go
-    buildCommand: cd services/cashout-engine && go build -o cashout ./cmd/api
-    startCommand: cd services/cashout-engine && ./cashout
+    buildCommand: cd orkapay/services/cashout-engine && go build -o cashout ./cmd/api
+    startCommand: cd orkapay/services/cashout-engine && ./cashout
+    plan: free
+    envVars:
+      - fromGroup: orkapay-production
+    healthCheckPath: /health
+    autoDeploy: true
+
+  - type: web
+    name: orkapay-whatsapp
+    env: go
+    buildCommand: cd orkapay/services/whatsapp-gateway && go build -o whatsapp-gateway ./cmd/api
+    startCommand: cd orkapay/services/whatsapp-gateway && ./whatsapp-gateway
     plan: free
     envVars:
       - fromGroup: orkapay-production
