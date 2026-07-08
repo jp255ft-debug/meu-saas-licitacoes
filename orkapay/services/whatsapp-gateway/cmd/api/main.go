@@ -11,6 +11,7 @@ import (
 
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/adapter/inbound/rest/handler"
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/adapter/outbound/bsp"
+	"github.com/jp255ft-debug/whatsapp-gateway/internal/adapter/outbound/cashin"
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/config"
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/core/service/notification"
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/core/service/whatsapp"
@@ -28,7 +29,15 @@ func main() {
 	// 3. Initialize dependencies
 	bspSender := bsp.NewMockSender()
 
-	whatsappService := whatsapp.NewService(bspSender)
+	var cashinClient *cashin.Client
+	if cfg.CashinURL != "" {
+		cashinClient = cashin.NewClient(cfg.CashinURL, cfg.CashinAPIKey)
+		slog.Info("cashin client configured", "url", cfg.CashinURL)
+	} else {
+		slog.Warn("CASHIN_BASE_URL not set — using simulated payments")
+	}
+
+	whatsappService := whatsapp.NewService(bspSender, cashinClient)
 
 	// 4. Setup HTTP router
 	mux := http.NewServeMux()

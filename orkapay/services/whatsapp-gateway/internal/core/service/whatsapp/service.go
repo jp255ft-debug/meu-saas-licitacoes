@@ -9,16 +9,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jp255ft-debug/whatsapp-gateway/internal/adapter/outbound/cashin"
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/core/domain"
 	"github.com/jp255ft-debug/whatsapp-gateway/internal/core/port/outbound"
 )
 
 type Service struct {
-	sender outbound.BSPSender
+	sender   outbound.BSPSender
+	cashin   *cashin.Client
 }
 
-func NewService(sender outbound.BSPSender) *Service {
-	return &Service{sender: sender}
+func NewService(sender outbound.BSPSender, cashinClient *cashin.Client) *Service {
+	return &Service{sender: sender, cashin: cashinClient}
 }
 
 func (s *Service) ProcessMessage(ctx context.Context, msg *domain.WhatsAppMessage) error {
@@ -70,16 +72,59 @@ func (s *Service) parseCommand(raw string) (*domain.Command, error) {
 }
 
 func (s *Service) handleCreateInvoice(ctx context.Context, fromNumber string, cmd *domain.Command) error {
-	slog.InfoContext(ctx, "creating invoice", "amount", cmd.Amount, "payer", cmd.PayerName)
+	slog.InfoContext(ctx, "creating invoice via cashin-engine",
+		"amount", cmd.Amount,
+		"payer", cmd.PayerName,
+		"from", fromNumber,
+	)
 
+	amountCents := int64(cmd.Amount * 100)
+
+	if s.cashin != nil {
+		issued, err := s.cashin.CreateAndIssueInvoice(ctx, amountCents, cmd.PayerName)
+		if err != nil {
+			slog.ErrorContext(ctx, "failed to create invoice via cashin", "error", err)
+			message := fmt.Sprintf(
+				"❌ *Erro ao gerar cobrança*\n\n"+
+					"Não foi possível criar a cobrança no momento. Tente novamente mais tarde.\n\n"+
+					"Detalhes: %v",
+				err,
+			)
+			return s.sender.SendTextMessage(ctx, fromNumber, message)
+		}
+
+		message := fmt.Sprintf(
+			"✅ *Cobrança gerada com sucesso!*\n\n"+
+				"💳 *Valor:* R$ %.2f\n"+
+				"👤 *Pagador:* %s\n"+
+				"📄 *ID:* %s\n"+
+				"📌 *Status:* %s\n",
+			cmd.Amount, cmd.PayerName, issued.ID, issued.Status,
+		)
+
+		if issued.PixQRCode != "" {
+			message += fmt.Sprintf("📱 *Pix Copia e Cola:*\n`%s`\n\n", issued.PixQRCode)
+		}
+		if issued.PixKey != "" {
+			message += fmt.Sprintf("🔑 *Chave Pix:* %s\n", issued.PixKey)
+		}
+		if issued.InvoiceURL != "" {
+			message += fmt.Sprintf("🔗 *Link:* %s\n", issued.InvoiceURL)
+		}
+
+		message += "\nPague utilizando o Pix ou Boleto. O pagamento será confirmado automaticamente."
+
+		return s.sender.SendTextMessage(ctx, fromNumber, message)
+	}
+
+	// Fallback: cashin não configurado
 	paymentLink := "https://orkapay-cashin.onrender.com/pay/simulated-uuid"
-
 	message := fmt.Sprintf(
 		"✅ Cobrança gerada com sucesso!\n\n"+
 			"💳 *Valor:* R$ %.2f\n"+
 			"👤 *Pagador:* %s\n"+
 			"🔗 *Link de pagamento:* %s\n\n"+
-			"Envie este link para o pagador ou use o QR Code.",
+			"⚠️ Modo simulado — CASHIN_BASE_URL não configurada.",
 		cmd.Amount, cmd.PayerName, paymentLink,
 	)
 	return s.sender.SendTextMessage(ctx, fromNumber, message)
