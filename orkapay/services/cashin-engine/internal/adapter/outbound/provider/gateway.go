@@ -27,7 +27,7 @@ func (g *AsaasGateway) CreateInvoice(ctx context.Context, invoice *entity.Invoic
 		BillingType: "PIX",
 		DueDate:     invoice.DueDate().Format("2006-01-02"),
 		Value:       float64(invoice.AmountCents()) / 100.0,
-		Description: invoice.Description(),
+		Description: "",
 		ExternalID:  invoice.ID(),
 	}
 
