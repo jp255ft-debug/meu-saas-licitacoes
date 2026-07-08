@@ -100,14 +100,16 @@ func (c *AsaasClient) FindCustomerByTaxID(ctx context.Context, taxID string) (*C
 }
 
 func (c *AsaasClient) CreateInvoice(ctx context.Context, req *CreateInvoiceRequest) (*CreateInvoiceResponse, error) {
-	if len(req.Split) == 0 && c.walletID != "" {
-		req.Split = []Split{
-			{
-				WalletId:   c.walletID,
-				FixedValue: 0.50,
-			},
-		}
-	}
+	// Split desabilitado temporariamente: Asaas rejeita split para a própria carteira.
+	// TODO: reativar com subcontas (wallets diferentes) quando implementado.
+	// if len(req.Split) == 0 && c.walletID != "" {
+	// 	req.Split = []Split{
+	// 		{
+	// 			WalletId:   c.walletID,
+	// 			FixedValue: 0.50,
+	// 		},
+	// 	}
+	// }
 
 	respBody, err := c.doRequest(ctx, http.MethodPost, "/payments", req)
 	if err != nil {
