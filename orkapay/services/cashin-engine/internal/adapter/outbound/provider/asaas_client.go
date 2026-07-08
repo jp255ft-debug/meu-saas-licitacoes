@@ -69,6 +69,36 @@ func (c *AsaasClient) doRequest(ctx context.Context, method, path string, body i
 	return respBody, nil
 }
 
+// CreateCustomer cria um novo cliente no Asaas.
+func (c *AsaasClient) CreateCustomer(ctx context.Context, req *CreateCustomerRequest) (*CustomerResponse, error) {
+	respBody, err := c.doRequest(ctx, http.MethodPost, "/customers", req)
+	if err != nil {
+		return nil, err
+	}
+	var result CustomerResponse
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse customer response: %w", err)
+	}
+	return &result, nil
+}
+
+// FindCustomerByTaxID busca um cliente pelo CPF/CNPJ no Asaas.
+func (c *AsaasClient) FindCustomerByTaxID(ctx context.Context, taxID string) (*CustomerResponse, error) {
+	path := "/customers?cpfCnpj=" + taxID
+	respBody, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	var list CustomerListResponse
+	if err := json.Unmarshal(respBody, &list); err != nil {
+		return nil, fmt.Errorf("failed to parse customer list: %w", err)
+	}
+	if len(list.Data) == 0 {
+		return nil, nil
+	}
+	return &list.Data[0], nil
+}
+
 func (c *AsaasClient) CreateInvoice(ctx context.Context, req *CreateInvoiceRequest) (*CreateInvoiceResponse, error) {
 	if len(req.Split) == 0 && c.walletID != "" {
 		req.Split = []Split{

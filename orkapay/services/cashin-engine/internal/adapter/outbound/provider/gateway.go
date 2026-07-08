@@ -21,9 +21,45 @@ func NewAsaasGateway(baseURL, apiKey, walletID string) *AsaasGateway {
 	}
 }
 
+// getOrCreateCustomer busca um customer pelo CPF/CNPJ ou cria um novo no Asaas.
+func (g *AsaasGateway) getOrCreateCustomer(ctx context.Context, name, taxID string) (*CustomerResponse, error) {
+	// Tenta encontrar customer existente
+	customer, err := g.client.FindCustomerByTaxID(ctx, taxID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find customer: %w", err)
+	}
+	if customer != nil {
+		slog.InfoContext(ctx, "found existing customer", "id", customer.ID, "name", name)
+		return customer, nil
+	}
+
+	// Cria novo customer
+	req := &CreateCustomerRequest{
+		Name:    name,
+		CpfCnpj: taxID,
+	}
+
+	customer, err = g.client.CreateCustomer(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create customer: %w", err)
+	}
+
+	slog.InfoContext(ctx, "created customer on Asaas", "id", customer.ID, "name", name)
+	return customer, nil
+}
+
 // CreateInvoice cria uma fatura no Asaas com Split de Pagamento.
 func (g *AsaasGateway) CreateInvoice(ctx context.Context, invoice *entity.Invoice) (externalID, pixQRCode, pixKey string, err error) {
+	// 1. Buscar ou criar customer no Asaas
+	payer := invoice.Payer()
+	customer, err := g.getOrCreateCustomer(ctx, payer.Name, payer.TaxID)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to get/customer: %w", err)
+	}
+
+	// 2. Montar request da invoice
 	req := &CreateInvoiceRequest{
+		Customer:    customer.ID,
 		BillingType: "PIX",
 		DueDate:     invoice.DueDate().Format("2006-01-02"),
 		Value:       float64(invoice.AmountCents()) / 100.0,
@@ -31,7 +67,11 @@ func (g *AsaasGateway) CreateInvoice(ctx context.Context, invoice *entity.Invoic
 		ExternalID:  invoice.ID(),
 	}
 
-	slog.InfoContext(ctx, "creating invoice on Asaas", "amount", req.Value, "due", req.DueDate)
+	slog.InfoContext(ctx, "creating invoice on Asaas",
+		"customer", customer.ID,
+		"amount", req.Value,
+		"due", req.DueDate,
+	)
 
 	resp, err := g.client.CreateInvoice(ctx, req)
 	if err != nil {
