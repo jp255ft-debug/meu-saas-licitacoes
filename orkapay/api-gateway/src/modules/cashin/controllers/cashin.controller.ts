@@ -16,7 +16,7 @@ export class CashinController {
     summary: 'Criar uma nova fatura',
     description: 'Cria uma fatura para cobrança B2B. A fatura inicia com status PENDING.\n\n**Fluxo completo:**\n1. Crie a fatura (PENDING)\n2. Emita com POST /invoices/{id}/issue (gera PIX/boleto)\n3. Cliente paga\n4. Webhook atualiza para PAID',
   })
-  @ApiResponse({ status: 201, description: 'Fatura criada com sucesso', type: InvoiceResponseDto })
+  @ApiResponse({ status: 201, description: 'Fatura criada com sucesso', type: InvoiceResponseDto, schema: { example: { id: 'cin-20260709-abc123', amount_cents: 10000, status: 'PENDING', due_date: '2026-08-15', payer_name: 'Empresa XPTO', payer_tax_id: '11222333000181', external_id: null, pix_qr_code: null, pix_key: null, provider: null, created_at: '2026-07-09T10:00:00Z', updated_at: '2026-07-09T10:00:00Z' } } })
   @ApiResponse({ status: 400, description: 'Dados inválidos', type: ErrorResponseDto, schema: { example: ERROR_EXAMPLES.badRequest } })
   @ApiResponse({ status: 401, description: 'API Key inválida', type: ErrorResponseDto, schema: { example: ERROR_EXAMPLES.unauthorized } })
   @ApiResponse({ status: 429, description: 'Limite de requisições excedido', type: ErrorResponseDto, schema: { example: ERROR_EXAMPLES.tooManyRequests } })
@@ -27,7 +27,7 @@ export class CashinController {
   @Get(':id')
   @ApiOperation({ summary: 'Buscar fatura por ID', description: 'Retorna os detalhes de uma fatura específica.' })
   @ApiParam({ name: 'id', description: 'ID da fatura (formato: cin-YYYYMMDD-xxxx)', example: 'cin-20260709-abc123' })
-  @ApiResponse({ status: 200, description: 'Fatura encontrada', type: InvoiceResponseDto })
+  @ApiResponse({ status: 200, description: 'Fatura encontrada', type: InvoiceResponseDto, schema: { example: { id: 'cin-20260709-abc123', amount_cents: 10000, status: 'PAID', due_date: '2026-08-15', payer_name: 'Empresa XPTO', payer_tax_id: '11222333000181', external_id: 'pay_abc123xyz', pix_qr_code: '000201010212...', pix_key: 'pixkey@orkapay.com', provider: 'ASAAS', created_at: '2026-07-09T10:00:00Z', updated_at: '2026-07-09T14:30:00Z' } } })
   @ApiResponse({ status: 404, description: 'Fatura não encontrada', type: ErrorResponseDto, schema: { example: ERROR_EXAMPLES.notFound } })
   @ApiResponse({ status: 401, description: 'API Key inválida', type: ErrorResponseDto, schema: { example: ERROR_EXAMPLES.unauthorized } })
   async getInvoice(@Param('id') id: string): Promise<InvoiceResponseDto> {
