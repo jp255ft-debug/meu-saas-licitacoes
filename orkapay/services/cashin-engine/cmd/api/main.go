@@ -22,16 +22,12 @@ import (
 )
 
 func main() {
-	// 1. Carregar configuração
 	cfg := LoadConfig()
 
-	// 2. Configurar logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
-
 	logger.Info("iniciando cashin-engine", "port", cfg.ServerPort)
 
-	// 3. Conectar ao banco de dados
 	var svc *invoice.ServiceImpl
 	var webhookSvc *webhook.WebhookService
 	var pool *pgxpool.Pool
@@ -48,17 +44,14 @@ func main() {
 		}
 		defer pool.Close()
 
-		// 4. Executar migrations inline
 		if err := runMigrations(ctx, pool); err != nil {
 			logger.Error("falha ao executar migrations", "error", err)
 			os.Exit(1)
 		}
 
-		// 5. Montar dependências
 		repo := postgres.NewInvoiceRepository(pool)
 		webhookRepo := postgres.NewWebhookRepository(pool)
 
-		// Usar gateway real se configurado, senão usar mock
 		asaasBaseURL := os.Getenv("ASAAS_BASE_URL")
 		asaasAPIKey := os.Getenv("ASAAS_API_KEY")
 		asaasWalletID := os.Getenv("ASAAS_WALLET_ID")
@@ -82,10 +75,10 @@ func main() {
 	// 6. Configurar autenticação, rate limiter e router HTTP
 	apiKeys := parseAPIKeys(cfg.APIKeys)
 	mapProvider := middleware.NewMapAuthProvider(apiKeys)
-	
+
 	var authProviders []middleware.AuthProvider
 	authProviders = append(authProviders, mapProvider)
-	
+
 	// Se tiver pool de banco, adiciona CachedDBProvider como fallback
 	if pool != nil {
 		dbProvider := middleware.NewCachedDBProvider(func(apiKey string) (string, bool) {
@@ -101,13 +94,11 @@ func main() {
 		authProviders = append(authProviders, dbProvider)
 	}
 
-	// 6a. Instanciar Asaas webhook handler com validação HMAC
 	asaasWebhookHandler := handler.NewAsaasWebhookHandler(cfg.AsaasWebhookToken, cfg.AsaasWebhookSecret)
 
 	rateLimiter := middleware.NewRateLimiter(100, 1*time.Minute)
 	httpHandler := router.New(svc, webhookSvc, authProviders, rateLimiter, asaasWebhookHandler)
 
-	// 7. Servidor HTTP
 	server := &http.Server{
 		Addr:         ":" + cfg.ServerPort,
 		Handler:      httpHandler,
@@ -116,16 +107,13 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 8. Graceful shutdown
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		<-sigChan
-
 		logger.Info("recebido sinal de desligamento")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("erro no desligamento do servidor", "error", err)
 		}
@@ -136,50 +124,64 @@ func main() {
 		logger.Error("erro no servidor", "error", err)
 		os.Exit(1)
 	}
-
 	logger.Info("servidor desligado com sucesso")
 }
 
-// runMigrations executa o SQL de criação da tabela.
+// runMigrations executa o SQL de criação das tabelas.
 func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	migration := `
-	CREATE TABLE IF NOT EXISTS invoices (
-		id VARCHAR(64) PRIMARY KEY,
-		external_id VARCHAR(128),
-		invoice_number VARCHAR(128) NOT NULL,
-		status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
-		amount_cents BIGINT NOT NULL,
-		due_date TIMESTAMPTZ NOT NULL,
-		payer_name VARCHAR(255) NOT NULL,
-		payer_tax_id VARCHAR(32) NOT NULL,
-		payer_email VARCHAR(255),
-		payer_phone VARCHAR(32),
-		payer_address_line1 VARCHAR(255),
-		payer_address_line2 VARCHAR(255),
-		payer_city VARCHAR(128),
-		payer_state VARCHAR(32),
-		payer_zip_code VARCHAR(16),
-		provider VARCHAR(32) NOT NULL,
-		pix_qr_code TEXT,
-		pix_key VARCHAR(128),
-		boleto_barcode VARCHAR(64),
-		boleto_digitable VARCHAR(64),
-		metadata JSONB DEFAULT '{}',
-		paid_amount_cents BIGINT NOT NULL DEFAULT 0,
-		paid_at TIMESTAMPTZ,
-		payment_method VARCHAR(32),
-		cancelled_at TIMESTAMPTZ,
-		failure_reason TEXT,
-		version INT NOT NULL DEFAULT 1,
-		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-	);
-	CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
-	CREATE INDEX IF NOT EXISTS idx_invoices_external_id ON invoices(external_id);
-	CREATE INDEX IF NOT EXISTS idx_invoices_payer_tax_id ON invoices(payer_tax_id);
-	`
-	_, err := pool.Exec(ctx, migration)
-	return err
+	queries := []string{
+		`CREATE TABLE IF NOT EXISTS invoices (
+			id VARCHAR(64) PRIMARY KEY,
+			external_id VARCHAR(128),
+			invoice_number VARCHAR(128) NOT NULL,
+			status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+			amount_cents BIGINT NOT NULL,
+			due_date TIMESTAMPTZ NOT NULL,
+			payer_name VARCHAR(255) NOT NULL,
+			payer_tax_id VARCHAR(32) NOT NULL,
+			payer_email VARCHAR(255),
+			payer_phone VARCHAR(32),
+			payer_address_line1 VARCHAR(255),
+			payer_address_line2 VARCHAR(255),
+			payer_city VARCHAR(128),
+			payer_state VARCHAR(32),
+			payer_zip_code VARCHAR(16),
+			provider VARCHAR(32) NOT NULL,
+			pix_qr_code TEXT,
+			pix_key VARCHAR(128),
+			boleto_barcode VARCHAR(64),
+			boleto_digitable VARCHAR(64),
+			metadata JSONB DEFAULT '{}',
+			paid_amount_cents BIGINT NOT NULL DEFAULT 0,
+			paid_at TIMESTAMPTZ,
+			payment_method VARCHAR(32),
+			cancelled_at TIMESTAMPTZ,
+			failure_reason TEXT,
+			version INT NOT NULL DEFAULT 1,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+		CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+		CREATE INDEX IF NOT EXISTS idx_invoices_external_id ON invoices(external_id);
+		CREATE INDEX IF NOT EXISTS idx_invoices_payer_tax_id ON invoices(payer_tax_id);`,
+		`CREATE TABLE IF NOT EXISTS api_keys (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			client_id VARCHAR(255) NOT NULL,
+			key_hash TEXT NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			expires_at TIMESTAMPTZ,
+			revoked_at TIMESTAMPTZ,
+			last_used_at TIMESTAMPTZ
+		);
+		CREATE INDEX IF NOT EXISTS idx_api_keys_client_id ON api_keys(client_id);
+		CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(revoked_at) WHERE revoked_at IS NULL;`,
+	}
+	for _, q := range queries {
+		if _, err := pool.Exec(ctx, q); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // parseAPIKeys converte string "key1:id1,key2:id2" em map.
