@@ -20,6 +20,10 @@ func New(
 ) http.Handler {
 	mux := http.NewServeMux()
 
+	// Auth validation endpoint
+	authH := handler.NewAuthHandler(authProviders)
+	mux.HandleFunc("POST /api/v1/auth/validate", authH.ValidateAPIKey)
+
 	// Metrics
 	metricsHandler := handler.NewMetrics()
 	mux.HandleFunc("GET /metrics", metricsHandler.MetricsHandler)

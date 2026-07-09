@@ -70,7 +70,7 @@ func APIKeyAuth(providers ...AuthProvider) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Rotas públicas não exigem autenticação
 			path := r.URL.Path
-			if path == "/health" || path == "/ready" || path == "/metrics" || len(path) >= 9 && path[:9] == "/swagger/" {
+			if path == "/health" || path == "/ready" || path == "/metrics" || path == "/api/v1/auth/validate" || len(path) >= 9 && path[:9] == "/swagger/" {
 				next.ServeHTTP(w, r)
 				return
 			}
