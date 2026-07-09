@@ -72,14 +72,12 @@ func main() {
 		logger.Warn("DATABASE_URL não configurada — modo sem persistência")
 	}
 
-	// 6. Configurar autenticação, rate limiter e router HTTP
 	apiKeys := parseAPIKeys(cfg.APIKeys)
 	mapProvider := middleware.NewMapAuthProvider(apiKeys)
 
 	var authProviders []middleware.AuthProvider
 	authProviders = append(authProviders, mapProvider)
 
-	// Se tiver pool de banco, adiciona CachedDBProvider como fallback
 	if pool != nil {
 		dbProvider := middleware.NewCachedDBProvider(func(apiKey string) (string, bool) {
 			var clientID string
@@ -130,6 +128,7 @@ func main() {
 // runMigrations executa o SQL de criação das tabelas.
 func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	queries := []string{
+		// Tabela invoices
 		`CREATE TABLE IF NOT EXISTS invoices (
 			id VARCHAR(64) PRIMARY KEY,
 			external_id VARCHAR(128),
@@ -164,17 +163,20 @@ func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 		CREATE INDEX IF NOT EXISTS idx_invoices_external_id ON invoices(external_id);
 		CREATE INDEX IF NOT EXISTS idx_invoices_payer_tax_id ON invoices(payer_tax_id);`,
+		// Tabela api_keys (criacao base + ALTER TABLE para colunas extras)
 		`CREATE TABLE IF NOT EXISTS api_keys (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			client_id VARCHAR(255) NOT NULL,
-			key_hash TEXT NOT NULL,
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			expires_at TIMESTAMPTZ,
-			revoked_at TIMESTAMPTZ,
-			last_used_at TIMESTAMPTZ
-		);
-		CREATE INDEX IF NOT EXISTS idx_api_keys_client_id ON api_keys(client_id);
-		CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(revoked_at) WHERE revoked_at IS NULL;`,
+			key_hash TEXT NOT NULL
+		);`,
+		// Adiciona colunas individualmente com IF NOT EXISTS
+		`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();`,
+		`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;`,
+		`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ;`,
+		`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ;`,
+		// Indices
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_client_id ON api_keys(client_id);`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(revoked_at) WHERE revoked_at IS NULL;`,
 	}
 	for _, q := range queries {
 		if _, err := pool.Exec(ctx, q); err != nil {
