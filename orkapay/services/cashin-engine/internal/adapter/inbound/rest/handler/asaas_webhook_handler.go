@@ -6,14 +6,17 @@ import (
 	"net/http"
 )
 
+// AsaasWebhookHandler processa webhooks recebidos do Asaas.
 type AsaasWebhookHandler struct {
 	webhookToken string
 }
 
+// NewAsaasWebhookHandler cria uma nova instância do handler.
 func NewAsaasWebhookHandler(webhookToken string) *AsaasWebhookHandler {
 	return &AsaasWebhookHandler{webhookToken: webhookToken}
 }
 
+// AsaasWebhookPayload representa o payload enviado pelo Asaas.
 type AsaasWebhookPayload struct {
 	Event  string `json:"event"`
 	Payment struct {
@@ -36,6 +39,7 @@ type AsaasWebhookPayload struct {
 	} `json:"split,omitempty"`
 }
 
+// HandleWebhook processa o webhook recebido.
 func (h *AsaasWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -62,7 +66,14 @@ func (h *AsaasWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Reque
 		"payment_id", payload.Payment.ID,
 		"external_id", payload.Payment.ExternalID,
 		"status", payload.Payment.Status,
+		"value", payload.Payment.Value,
 	)
+
+	// Nota: o processamento do webhook (atualizar invoice, creditar ledger)
+	// será implementado quando o fluxo de eventos estiver completo.
+	// Atualmente, o Asaas envia webhooks diretamente e o cashin já
+	// registra o pagamento no Asaas. A atualização local será feita
+	// via reconciliação (reconciliation service) ou em próxima versão.
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "received"})
