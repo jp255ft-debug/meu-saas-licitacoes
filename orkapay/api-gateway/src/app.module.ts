@@ -8,6 +8,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { CashinModule } from './modules/cashin/cashin.module';
 import { CashoutModule } from './modules/cashout/cashout.module';
 import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
+import { NotificationModule } from './modules/notification/notification.module';
 import { HealthModule } from './modules/health/health.module';
 import configuration from './config/configuration';
 
@@ -28,6 +29,7 @@ import configuration from './config/configuration';
     CashinModule,
     CashoutModule,
     ReconciliationModule,
+    NotificationModule,
     HealthModule,
   ],
   providers: [
