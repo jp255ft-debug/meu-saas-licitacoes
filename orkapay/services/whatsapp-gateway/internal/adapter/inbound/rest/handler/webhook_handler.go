@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -50,8 +51,9 @@ func (h *WebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		if err := h.service.ProcessMessage(ctx, msg); err != nil {
-			slog.ErrorContext(ctx, "failed to process message", "error", err, "from", msg.FromNumber)
+		bgCtx := context.Background()
+		if err := h.service.ProcessMessage(bgCtx, msg); err != nil {
+			slog.ErrorContext(bgCtx, "failed to process message", "error", err, "from", msg.FromNumber)
 		}
 	}()
 
