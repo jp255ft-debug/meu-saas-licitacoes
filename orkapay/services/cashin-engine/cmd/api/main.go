@@ -101,8 +101,8 @@ func main() {
 		authProviders = append(authProviders, dbProvider)
 	}
 
-	// 6a. Instanciar Asaas webhook handler
-	asaasWebhookHandler := handler.NewAsaasWebhookHandler(cfg.AsaasWebhookToken)
+	// 6a. Instanciar Asaas webhook handler com validação HMAC
+	asaasWebhookHandler := handler.NewAsaasWebhookHandler(cfg.AsaasWebhookToken, cfg.AsaasWebhookSecret)
 
 	rateLimiter := middleware.NewRateLimiter(100, 1*time.Minute)
 	httpHandler := router.New(svc, webhookSvc, authProviders, rateLimiter, asaasWebhookHandler)

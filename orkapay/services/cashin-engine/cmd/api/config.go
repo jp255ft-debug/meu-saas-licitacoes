@@ -8,15 +8,17 @@ type Config struct {
 	ServerPort        string
 	APIKeys           string
 	AsaasWebhookToken string
+	AsaasWebhookSecret string
 }
 
 // LoadConfig carrega as configurações das variáveis de ambiente.
 func LoadConfig() Config {
 	return Config{
-		DatabaseURL:       getEnv("DATABASE_URL", ""),
-		ServerPort:        getEnv("SERVER_PORT", "8080"),
-		APIKeys:           getEnv("API_KEYS", "demo-key:ClienteDemo"),
-		AsaasWebhookToken: getEnv("ASAAS_WEBHOOK_TOKEN", ""),
+		DatabaseURL:        getEnv("DATABASE_URL", ""),
+		ServerPort:         getEnv("SERVER_PORT", "8080"),
+		APIKeys:            getEnv("API_KEYS", "demo-key:ClienteDemo"),
+		AsaasWebhookToken:  getEnv("ASAAS_WEBHOOK_TOKEN", ""),
+		AsaasWebhookSecret: getEnv("ASAAS_WEBHOOK_SECRET", ""),
 	}
 }
 

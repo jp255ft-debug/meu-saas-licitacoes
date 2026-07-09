@@ -1,19 +1,24 @@
 package handler
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 )
 
 // AsaasWebhookHandler processa webhooks recebidos do Asaas.
 type AsaasWebhookHandler struct {
-	webhookToken string
+	webhookToken  string
+	webhookSecret string
 }
 
 // NewAsaasWebhookHandler cria uma nova instância do handler.
-func NewAsaasWebhookHandler(webhookToken string) *AsaasWebhookHandler {
-	return &AsaasWebhookHandler{webhookToken: webhookToken}
+func NewAsaasWebhookHandler(webhookToken, webhookSecret string) *AsaasWebhookHandler {
+	return &AsaasWebhookHandler{webhookToken: webhookToken, webhookSecret: webhookSecret}
 }
 
 // AsaasWebhookPayload representa o payload enviado pelo Asaas.
@@ -39,9 +44,41 @@ type AsaasWebhookPayload struct {
 	} `json:"split,omitempty"`
 }
 
+// validateWebhookSignature verifica a assinatura HMAC-SHA256 do payload.
+func validateWebhookSignature(body []byte, signatureHeader string, secret string) bool {
+	if secret == "" || signatureHeader == "" {
+		slog.Warn("webhook signature validation skipped: missing secret or signature header")
+		return false
+	}
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write(body)
+	expected := hex.EncodeToString(h.Sum(nil))
+	return hmac.Equal([]byte(expected), []byte(signatureHeader))
+}
+
 // HandleWebhook processa o webhook recebido.
 func (h *AsaasWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	// Lê o corpo completo para validação HMAC
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.WarnContext(ctx, "failed to read webhook body", "error", err)
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Valida HMAC-SHA256 do Asaas (header x-asaas-signature)
+	signature := r.Header.Get("x-asaas-signature")
+	if !validateWebhookSignature(body, signature, h.webhookSecret) {
+		slog.WarnContext(ctx, "invalid webhook HMAC signature",
+			"has_signature", signature != "",
+			"has_secret", h.webhookSecret != "",
+		)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	// Valida o token de autenticação enviado pelo Asaas no header
 	token := r.Header.Get("asaas-access-token")
@@ -55,7 +92,7 @@ func (h *AsaasWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Reque
 	}
 
 	var payload AsaasWebhookPayload
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	if err := json.Unmarshal(body, &payload); err != nil {
 		slog.WarnContext(ctx, "failed to decode asaas webhook payload", "error", err)
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
