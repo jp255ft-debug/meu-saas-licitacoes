@@ -55,7 +55,7 @@ func (c *Client) CreateAndIssueInvoice(ctx context.Context, amountCents int64, p
 		AmountCents: amountCents,
 		DueDate:     dueDate,
 		PayerName:   payerName,
-		PayerTaxID:  "00000000000",
+		PayerTaxID:  "11222333000181",
 		Provider:    "ASAAS",
 	}
 
