@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: orkapay-config
-data:
-  APP_ENV: production
-  DB_HOST: postgres
-  REDIS_HOST: redis
-  KAFKA_BROKERS: kafka:9092

@@ -1,0 +1,129 @@
+version: "3.8"
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: licitacao-postgres
+    environment:
+      POSTGRES_DB: licitacao_db
+      POSTGRES_USER: licitacao_user
+      POSTGRES_PASSWORD: licitacao_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - licitacao_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U licitacao_user -d licitacao_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── PgBouncer (Connection Pooler) ────────────────────────────────────────
+  pgbouncer:
+    image: bitnami/pgbouncer:latest
+    container_name: licitacao-pgbouncer
+    environment:
+      PGBOUNCER_DATABASE: "postgresql://licitacao_user:licitacao_pass@postgres:5432/licitacao_db"
+      PGBOUNCER_PORT: "6432"
+      PGBOUNCER_POOL_MODE: "transaction"
+      PGBOUNCER_MAX_CLIENT_CONN: "100"
+      PGBOUNCER_DEFAULT_POOL_SIZE: "10"
+    ports:
+      - "6432:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - licitacao_net
+
+  # ─── MongoDB ──────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: licitacao-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin_pass
+      MONGO_INITDB_DATABASE: licitacao_db
+    volumes:
+      - mongo_data:/data/db
+      - ./docker/mongodb/init.js:/docker-entrypoint-initdb.d/init.js
+    ports:
+      - "27017:27017"
+    networks:
+      - licitacao_net
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: licitacao-redis
+    command: redis-server --requirepass redis_pass
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - licitacao_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend API ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: licitacao-backend
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+    networks:
+      - licitacao_net
+    volumes:
+      - .:/app
+
+  # ─── Celery Worker ────────────────────────────────────────────────────────
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: licitacao-celery
+    command: celery -A backend.app.worker.celery_app worker --loglevel=info --concurrency=4
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - backend
+    networks:
+      - licitacao_net
+    volumes:
+      - .:/app
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+
+networks:
+  licitacao_net:
+    driver: bridge

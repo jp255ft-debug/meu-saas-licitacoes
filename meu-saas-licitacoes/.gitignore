@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.env
+.venv
+venv/
+*.log
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker Volumes (local)
+postgres_data/
+mongo_data/
+redis_data/
