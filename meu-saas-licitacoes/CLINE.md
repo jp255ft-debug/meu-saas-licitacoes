@@ -5,7 +5,7 @@
 
 ## 📌 1. OBJETIVO GERAL
 Construir um SaaS B2G de curadoria de editais públicos (Lei 14.133/2021) com inteligência artificial.
-- **Diferencial**: Resumir editais de 80 páginas em 5 tópicos usando IA (OpenAI).
+- **Diferencial**: Resumir editais de 80 páginas em 5 temas usando IA (OpenAI).
 - **Público-alvo**: MEIs e pequenas empresas que querem vender para o governo.
 
 ---
