@@ -1,0 +1,34 @@
+name: Superagent smoke trigger
+on:
+  push:
+    branches: [ ci/superagent-smoke-trigger ]
+permissions:
+  issues: write
+  contents: read
+jobs:
+  open-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create smoke-test issue as github-actions bot
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const NL = String.fromCharCode(10)
+            const body = [
+              'Pedido de correcao de texto (copy fix) - smoke test do superagent.',
+              '',
+              'Arquivo: CLINE.md',
+              'Trecho atual (linha do Diferencial):',
+              '"- **Diferencial**: Resumir editais de 80 paginas em 5 topicos usando IA (OpenAI)."',
+              '',
+              'Correcao solicitada: trocar a palavra "topicos" por "temas" nessa linha, mantendo o restante identico.',
+              '',
+              'Escopo: somente essa linha do CLINE.md.'
+            ].join(NL)
+            const res = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Correcao de wording em CLINE.md (smoke test do superagent)',
+              body
+            })
+            core.info('Created issue #' + res.data.number)
